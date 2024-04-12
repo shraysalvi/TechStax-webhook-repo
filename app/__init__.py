@@ -54,3 +54,6 @@ def delete(_id):
             return {"error": "Event not found"}
     except Exception as e:
         return {"error": str(e)}
+
+def latest_5_record():
+    return DB.githooks.find().sort([("_id", -1)]).limit(5)
