@@ -1,7 +1,7 @@
 # Developer Assessment Task
 
 End Result
-![Result of the task](result.png)
+![Result of the task](result2.png)
 
 
 ## Introduction
@@ -26,3 +26,4 @@ Build a GitHub repository that automatically sends webhook events for the follow
 - Create two GitHub repositories: [action-repo](https://github.com/shraysalvi/TechStax-action-repo) to handle GitHub actions using webhooks, and [webhook-repo](https://github.com/shraysalvi/TechStax-webhook-repo) for the endpoint where webhook endpoint code is written to capture changes from action-repo.
 - Customize the provided base code according to the requirements. But the case was found to be bit old, hence implemented my own codes where needed.
 - I used ajax for getting content from mongodb every 15 secounds.
+

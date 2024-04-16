@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    volumes:
+      - ./data/db:/data/db
+    ports:
+      - 27017:27017
+
+  flask:
+    build: .
+    container_name: flask-app
+    ports:
+      - 5000:5000
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=run.py
+      - MONGO_URI=mongodb://mongodb:27017/techstax
+    # Use in production
+    # command: "gunicorn --bind 0.0.0.0:5000 run:app"
+
+    # Use in development
+    command: "flask run --host=0.0.0.0" 

@@ -15,15 +15,14 @@
       <ul class="list-group">
         {% for record in data %}
         <li class="list-group-item">
-          {% if record.action == 'push' %} {{ record.author }} pushed to
-          <code>{{ record.to_branch }}</code> on {{ record.timestamp }} {% elif
-          record.action == 'merge' %} {{ record.author }} submitted a pull
-          request from <code>{{ record.from_branch }}</code> to
-          <code>{{ record.to_branch }}</code> on {{ record.timestamp }} {% else
-          %} {{ record.author }} merged branch
-          <code>{{ record.from_branch }}</code> to
-          <code>{{ record.to_branch }}</code> on {{ record.timestamp }} {% endif
-          %}
+          {% if record.action == 'push' %} 
+            {{ record.author }} pushed to <code>{{ record.to_branch }}</code> on {{ record.timestamp | format_timestamp }} 
+          {% elif record.action == 'pull_request' %} 
+            {{ record.author }} submitted a pull request from <code>{{ record.from_branch }}</code> to <code>{{ record.to_branch }}</code> on {{ record.timestamp | format_timestamp }} 
+          {% else %} 
+          {{ record.author }} merged branch <code>{{ record.from_branch }}</code> to
+          <code>{{ record.to_branch }}</code> on {{ record.timestamp | format_timestamp }} 
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -31,6 +30,23 @@
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
+    <script>
+      function formatTimestamp(timestamp) {
+        const dt = new Date(timestamp);
+      
+        const options = {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          timeZone: "UTC",
+          hour12: true,
+        };
+      
+        return dt.toLocaleString("en-US", options);
+      }
+    </script>
     <script>
       setInterval(function () {
         $.ajax({
@@ -43,11 +59,11 @@
               var record = data[i];
               var listItem = $("<li>").addClass("list-group-item");
               if (record['action'] == "push") {
-                listItem.text(record['author'] + " pushed to " + record['to_branch'] + " on " + record['timestamp']);
+                listItem.text(record['author'] + " pushed to " + record['to_branch'] + " on " + formatTimestamp(record['timestamp']));
               } else if (record['action'] == "merge") {
-                listItem.text(record['author'] + " merged branch " + record['from_branch'] + " to " + record['to_branch'] + " on " + record['timestamp']);
+                listItem.text(record['author'] + " merged branch " + record['from_branch'] + " to " + record['to_branch'] + " on " + formatTimestamp(record['timestamp']));
               } else {
-                listItem.text(record['author'] + " submitted a pull request from " + record['from_branch'] + " to " + record['to_branch'] + " on " + record['timestamp']);
+                listItem.text(record['author'] + " submitted a pull request from " + record['from_branch'] + " to " + record['to_branch'] + " on " + formatTimestamp(record['timestamp']));
               }
               recordsList.append(listItem);
             }
@@ -56,7 +72,7 @@
             console.log("Error:", error);
           },
         });
-      }, 150000); // 15 seconds in milliseconds
+      }, 15000); // 15 seconds in milliseconds
     </script>
   </body>
 </html>
