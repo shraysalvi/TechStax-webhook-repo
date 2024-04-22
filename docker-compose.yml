@@ -17,6 +17,7 @@ services:
     depends_on:
       - mongodb
     volumes:
+      - ./logs:/app/logs
       - .:/app
     environment:
       - FLASK_APP=run.py

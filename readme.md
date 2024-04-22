@@ -1,7 +1,7 @@
 # Developer Assessment Task
 
 End Result
-![Result of the task](result2.png)
+![Result of the task](result.png)
 
 
 ## Introduction

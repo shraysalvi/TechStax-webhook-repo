@@ -1,60 +1,114 @@
-from app import insert
+from datetime import datetime, timezone
+from app.extensions import insert
 from flask import Blueprint, request
-webhook = Blueprint('Webhook', __name__, url_prefix='/webhook')
-from datetime import datetime, timezone 
 import json
+webhook = Blueprint('Webhook', __name__, url_prefix='/webhook')
 
 
-def merge(data):
-    insert({
-        "request_id": data.get("after"),
-        "author": data.get("commits")[1].get("author").get("username"),
-        "action": "merge",
-        "from_branch": data.get("commits")[0].get("url"),
-        "to_branch": data.get("commits")[1].get("url"),
-        "timestamp": data.get("head_commit").get("timestamp")
-    })
+def ist_iso_to_zulu_utc(datetime_str):
+    """
+    Convert a datetime string in IST (Indian Standard Time) to Zulu time (UTC).
+
+    Args:
+        datetime_str (str): The datetime string in the format "%Y-%m-%dT%H:%M:%S%z".
+
+    Returns:
+        str: The converted datetime string in Zulu time (UTC) format "%Y-%m-%dT%H:%M:%SZ".
+    """
+    dt = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%S%z")
+    output_str = dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return output_str
 
 
-def pull(data):
-    insert({
-        "request_id": data.get("pull_request").get("head").get("sha"),
-        "author": data.get("pull_request").get("head").get("repo").get("owner").get("login"),
-        "action": "pull_request",
-        "from_branch": data.get("pull_request").get("head").get("repo").get("full_name"),
-        "to_branch": data.get("repository").get("full_name"),
-        "timestamp": datetime.now(timezone.utc).astimezone().isoformat()
-    })
+def merge(data: dict):
+    """
+    This function is responsible for storing the data in the database when a merge event is triggered.
+
+    Args:
+        data (dict): Dictionary containing the data from the webhook.
+    """
+    try:
+        return insert({
+            "request_id": data["pull_request"]["id"],
+            "author": data["pull_request"]["merged_by"]["login"],
+            "action": "merge",
+            "from_branch": data["pull_request"]["head"]["repo"]["full_name"],
+            "to_branch": data["pull_request"]["base"]["repo"]["full_name"],
+            "timestamp": datetime.strptime(data["pull_request"]["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        }), 200
+    except Exception as e:
+        return {"error": str(e)}, 400
 
 
-def push(data):
-    repo = data.get("repository").get("full_name")
-    insert({
-        "request_id": data.get("after"),
-        "author": data.get("head_commit").get("author").get("username"),
-        "action": "push",
-        "from_branch": repo,
-        "to_branch": repo,
-        "timestamp": data.get("head_commit").get("timestamp")
-    })
+def pull(data: dict):
+    """
+    This function is responsible for storing the data in the database when a pull request event is triggered.
+
+    Args:
+        data (dict): Dictionary containing the data from the webhook.
+    """
+    try:
+        return insert({
+            "request_id": data["pull_request"]["id"],
+            "author": data["pull_request"]["user"]["login"],
+            "action": "pull_request",
+            "from_branch": data["pull_request"]["head"]["repo"]["full_name"],
+            "to_branch": data["repository"]["full_name"],
+            "timestamp": datetime.strptime(data["pull_request"]["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        }), 200
+    except Exception as e:
+        return {"error": str(e)}, 400
 
 
-@webhook.route('/receiver', methods=["POST", "GET"])
+def push(data: dict):
+    """
+    This function is responsible for storing the data in the database when a push event is triggered.
+
+    Args:
+        data (dict): Dictionary containing the data from the webhook.
+    """
+
+    try:
+        return insert({
+            "request_id": data["after"],
+            "author": data["commits"][-1]["author"]["username"],
+            "action": "push",
+            "to_branch": data["repository"]["full_name"],
+            "timestamp": datetime.strptime(ist_iso_to_zulu_utc(data["commits"][-1]["timestamp"]), "%Y-%m-%dT%H:%M:%SZ")
+        }), 200
+    except Exception as e:
+        return {"error": str(e)}, 400
+
+
+@webhook.route('/receiver', methods=["POST"])
 def receiver():
+    """
+    This function is responsible for receiving the webhook from github and storing the data in the database.
+    """
     if request.is_json:
-        if request.headers['X-Github-Event'] == "push":
-
+        if request.headers.get('X-Github-Event', None) == "push":
             data = request.get_json()
 
-            # with open("merge.json", "w") as file:
+            # with open("push-merge.json", "w") as file:
             #     json.dump(data, file)
 
-            if len(data.get("commits")) > 1:
-                merge(data)
-            else:
-                push(data)
+            return push(data)
 
-        if request.headers['X-Github-Event'] == "pull_request":
+        elif request.headers.get('X-Github-Event', None) == "pull_request":
             data = request.get_json()
-            pull(data)
-        return "", 200
+
+            # with open("pull-merge.json", "w") as file:
+            #     json.dump(data, file)
+
+            if data["pull_request"]["merged"]:
+                return merge(data)
+            else:
+                return pull(data)
+        else:
+            return {"error": "Unsupported Event"}, 400
+    else:
+        return {"error": "Expected Json Data"}, 400
+
+# TODO:
+# explain the code - https://www.tornadoweb.org/en/stable/guide/queues.html
+# multithreading vs multiprocessing

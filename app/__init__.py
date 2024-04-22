@@ -1,60 +1,39 @@
 from flask import Flask
 from flask_pymongo import PyMongo
 import os
+from logging import config
 
+
+# application and db config
 app = Flask(__name__)
-app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "`mongodb://mongodb:27017/techstax`")
+app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://mongodb:27017/techstax")
 mongo = PyMongo(app)
 
-DB = mongo.db
 
-def gets():
-    try:
-        data = DB.githooks.find({})
-        return data
-    except Exception as e:
-        return {"error": str(e)}
+# log configs
+config.dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "formatter": "default",
+            },
+            "prod": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": "./logs/record.log",
+                "maxBytes": 1000000,
+                "backupCount": 5,
+                "formatter": "default",
+            },
+        },
+        "root": {"level": "DEBUG", "handlers": ["console", "prod"]},
+    }
+)
 
-
-def get(_id):
-    try:
-        data = DB.githooks.find_one({"_id": _id})
-        if data:
-            return data
-        else:
-            return {"error": "Event not found"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def insert(event_data):
-    try:
-        inserted_id = DB.githooks.insert_one(event_data).inserted_id
-        return str(inserted_id)
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def update(_id, event_data):
-    try:
-        result = DB.githooks.update_one({"_id": _id}, {"$set": event_data})
-        if result.modified_count > 0:
-            return {"message": "Event updated successfully"}
-        else:
-            return {"error": "Event not found or no changes made"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def delete(_id):
-    try:
-        result = DB.githooks.delete_one({"_id": _id})
-        if result.deleted_count > 0:
-            return {"message": "Event deleted successfully"}
-        else:
-            return {"error": "Event not found"}
-    except Exception as e:
-        return {"error": str(e)}
-
-def latest_5_record():
-    return DB.githooks.find().sort([("_id", -1)]).limit(5)

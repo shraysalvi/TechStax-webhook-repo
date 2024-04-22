@@ -3,3 +3,6 @@ __pycache__/
 *$py.class
 wheels/
 venv
+.env
+logs/record.log
+data/db/*
