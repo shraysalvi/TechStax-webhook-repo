@@ -130,7 +130,6 @@ def last_15min():
     Returns:
         data (cursor): Cursor object containing the latest 5 githook records.
     """
-    # delete_old_records()
-
+    delete_old_records()
     sec15_ago = datetime.now() - timedelta(seconds=15)
     return DB.githooks.find({"timestamp": {"$gte": sec15_ago}}).sort([("_id", -1)])
